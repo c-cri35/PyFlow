@@ -7,9 +7,9 @@ from PyFlow.UI.Utils.stylesheet import editableStyleSheet
 
 
 class CanvasBase(QGraphicsView):
-
     _manipulationMode = CanvasManipulationMode.NONE
     _mouseWheelZoomRate = 0.0005
+    _sceneSizeFactor = 5
 
     def __init__(self):
         super(CanvasBase, self).__init__()
@@ -23,26 +23,32 @@ class CanvasBase(QGraphicsView):
         # Antialias -- Change to Settings
         self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setRenderHint(QtGui.QPainter.TextAntialiasing)
-        ##
         self.setAcceptDrops(True)
         self.setAttribute(QtCore.Qt.WA_AlwaysShowToolTips)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
 
-        self.setScene(self.createScene())
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
-        self.scene().setSceneRect(QtCore.QRectF(0, 0, 10, 10))
+        self.setScene(self.createScene())
 
         self.mousePressPose = QtCore.QPointF(0, 0)
         self.mousePos = QtCore.QPointF(0, 0)
         self._lastMousePos = QtCore.QPointF(0, 0)
 
         self.centerOn(QtCore.QPointF(self.sceneRect().width() / 2, self.sceneRect().height() / 2))
+        self._resizeSceneToEnableAnchorZoom()
 
     def createScene(self):
         scene = QGraphicsScene(self)
         scene.setItemIndexMethod(QGraphicsScene.NoIndex)
         scene.setSceneRect(QtCore.QRectF(0, 0, 10, 10))
         return scene
+
+    def _resizeSceneToEnableAnchorZoom(self):
+        self.scene().setSceneRect(QtCore.QRectF(0, 0,
+                                                self.viewport().width() * self._sceneSizeFactor,
+                                                self.viewport().height() * self._sceneSizeFactor))
 
     def getItemsRect(self, cls=QGraphicsItem, bSelectedOnly=False, bVisibleOnly=True):
         rectangles = []
@@ -136,14 +142,32 @@ class CanvasBase(QGraphicsView):
         else:
             self.zoom(1 - 0.1)
 
+    def updateSceneSize(self):
+        widget_rect_in_scene = QtCore.QRectF(self.mapToScene(-20, -20),
+                                             self.mapToScene(self.rect().bottomRight() + QtCore.QPoint(20, 20)))
+
+        new_top_left = QtCore.QPointF(self.sceneRect().topLeft())
+        new_bottom_right = QtCore.QPointF(self.sceneRect().bottomRight())
+
+        # extend the current scene limits if reached
+        if self.sceneRect().top() > widget_rect_in_scene.top():
+            new_top_left.setY(widget_rect_in_scene.top())
+
+        if self.sceneRect().bottom() < widget_rect_in_scene.bottom():
+            new_bottom_right.setY(widget_rect_in_scene.bottom())
+
+        if self.sceneRect().left() > widget_rect_in_scene.left():
+            new_top_left.setX(widget_rect_in_scene.left())
+
+        if self.sceneRect().right() < widget_rect_in_scene.right():
+            new_bottom_right.setX(widget_rect_in_scene.right())
+
+        self.setSceneRect(QtCore.QRectF(new_top_left, new_bottom_right))
+
     def pan(self, delta):
-        rect = self.sceneRect()
-        scale = self.currentViewScale()
-        x = -delta.x() / scale
-        y = -delta.y() / scale
-        rect.translate(x, y)
-        self.setSceneRect(rect)
-        self.update()
+        self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
+        self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+        self.updateSceneSize()
 
     def resetScale(self):
         self.resetMatrix()
