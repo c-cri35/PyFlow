@@ -480,7 +480,7 @@ class PinGroup(UIPinBase):
         self._name = name
         self._direction = direction
         super(PinGroup, self).__init__(owningNode, None)
-        self.expanded = True
+        self.expanded = False
         self._pins = list()
 
     @property
@@ -544,6 +544,7 @@ class PinGroup(UIPinBase):
 
     def addPin(self, uiPin):
         self._pins.append(uiPin)
+        uiPin.setVisible(self.expanded)
         uiPin.OnPinDeleted.connect(self.onChildKilled)
 
     def onClick(self):
