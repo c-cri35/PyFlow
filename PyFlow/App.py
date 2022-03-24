@@ -31,6 +31,7 @@ from Qt import QtCore
 from Qt.QtWidgets import *
 
 from PyFlow import GET_PACKAGES
+from PyFlow.callStackMessageBox import showCallStackMessageBox
 from PyFlow.Core.Common import currentProcessorTime
 from PyFlow.Core.Common import SingletonDecorator
 from PyFlow.Core.PathsRegistry import PathsRegistry
@@ -201,7 +202,8 @@ class PyFlow(QMainWindow):
             exporters = None
             try:
                 exporters = package.GetExporters()
-            except:
+            except Exception as e:
+                showCallStackMessageBox(e, f"Could not load exporter for package {packageName}")
                 continue
             pkgMenu = IOMenu.addMenu(packageName)
             for exporterName, exporterClass in exporters.items():
@@ -504,7 +506,7 @@ class PyFlow(QMainWindow):
 
     def shouldSave(self):
         if self.modified:
-            btn = QMessageBox.warning(self, "Confirm?", "Unsaved data will be lost. Save?", QMessageBox.Yes | QMessageBox.No | QMessageBox.Discard)
+            btn = QMessageBox.warning(self, "Confirm?", "Unsaved data will be lost. Save?", QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
             if btn == QMessageBox.No:
                 return QMessageBox.No
             else:
@@ -518,7 +520,7 @@ class PyFlow(QMainWindow):
             if not self.save():
                 event.ignore()
                 return
-        elif shouldSave == QMessageBox.Discard:
+        elif shouldSave == QMessageBox.Cancel:
             event.ignore()
             return
 
@@ -591,7 +593,7 @@ class PyFlow(QMainWindow):
                         extraPackagePaths.append(os.path.normpath(rawPath))
             INITIALIZE(additionalPackageLocations=extraPackagePaths, software=software)
         except Exception as e:
-            QMessageBox.critical(None, "Fatal error", str(e))
+            showCallStackMessageBox(e, "Fatal error")
             return
 
         instance.startMainLoop()

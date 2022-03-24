@@ -27,6 +27,7 @@ import os
 import json
 
 from PyFlow.Packages import *
+from PyFlow.callStackMessageBox import showCallStackMessageBox
 
 
 __all__ = [
@@ -212,7 +213,7 @@ def INITIALIZE(additionalPackageLocations=[], software=""):
                 __PACKAGES[modname] = package
                 __PACKAGE_PATHS[modname] = os.path.normpath(mod.__path__[0])
         except Exception as e:
-            QMessageBox.critical(None, str("Fatal error"), "Error On Module %s :\n%s" % (modname, str(e)))
+            showCallStackMessageBox(e, "Fatal error", "Error On Module %s :\n%s" % (modname, str(e)))
             continue
 
     registeredInternalPinDataTypes = set()
